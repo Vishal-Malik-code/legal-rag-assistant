@@ -38,6 +38,14 @@ def _load_vector_store(index_mtime: float) -> FAISS:
     )
 
 
+def _format_source(metadata: dict) -> str:
+    """Build a readable source label, e.g. 'agreement.pdf (page 3)'."""
+    source = metadata.get("source", "Unknown Source")
+    page = metadata.get("page")
+
+    return f"{source} (page {page})" if page else source
+
+
 def retrieve_legal_context(
     query: str,
     top_k: int = 3,
@@ -54,7 +62,7 @@ def retrieve_legal_context(
     Returns:
         tuple:
             context (str): Combined retrieved text.
-            sources (list[str]): Unique source document names.
+            sources (list[str]): Unique source labels (file name and page).
     """
 
     index_file = os.path.join(FAISS_INDEX_PATH, "index.faiss")
@@ -69,10 +77,8 @@ def retrieve_legal_context(
         print("\n========== Retrieved Chunks ==========\n")
 
         for index, doc in enumerate(docs, start=1):
-            source = doc.metadata.get("source", "Unknown Source")
-
             print(f"Chunk {index}")
-            print(f"Source: {source}")
+            print(f"Source: {_format_source(doc.metadata)}")
             print("-" * 80)
             print(doc.page_content)
             print("-" * 80)
@@ -83,10 +89,7 @@ def retrieve_legal_context(
     )
 
     sources = sorted(
-        {
-            doc.metadata.get("source", "Unknown Source")
-            for doc in docs
-        }
+        {_format_source(doc.metadata) for doc in docs}
     )
 
     return context, sources
