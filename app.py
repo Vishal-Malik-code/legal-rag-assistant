@@ -66,28 +66,33 @@ uploaded_file = st.file_uploader(
 )
 
 if uploaded_file:
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-        temp_file.write(uploaded_file.read())
-        pdf_path = temp_file.name
+    file_key = (uploaded_file.name, uploaded_file.size)
 
-    st.success(f"✅ Uploaded: {uploaded_file.name}")
+    # Streamlit reruns the script on every interaction, so only
+    # build the index when a new file has been uploaded.
+    if st.session_state.get("indexed_file") != file_key:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
+            temp_file.write(uploaded_file.getvalue())
+            pdf_path = temp_file.name
 
-    try:
-        with st.spinner("Building FAISS index..."):
-            build_index_from_pdf(
-                pdf_path,
-                persist_dir=FAISS_DIR,
-                source_name=uploaded_file.name,
-            )
+        try:
+            with st.spinner("Building FAISS index..."):
+                build_index_from_pdf(
+                    pdf_path,
+                    persist_dir=FAISS_DIR,
+                    source_name=uploaded_file.name,
+                )
 
-        st.success("✅ Document indexed successfully!")
+            st.session_state["indexed_file"] = file_key
 
-    except Exception as e:
-        st.error(f"Failed to build index.\n\n{e}")
-        st.stop()
+        except Exception as e:
+            st.error(f"Failed to build index.\n\n{e}")
+            st.stop()
 
-    finally:
-        os.remove(pdf_path)
+        finally:
+            os.remove(pdf_path)
+
+    st.success(f"✅ {uploaded_file.name} indexed successfully!")
 
     st.divider()
 
