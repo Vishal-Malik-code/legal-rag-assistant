@@ -10,7 +10,7 @@ Workflow:
 
 import os
 
-import fitz  # PyMuPDF
+import pymupdf
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -36,7 +36,7 @@ def extract_pages_from_pdf(pdf_path: str) -> list[str]:
     Returns:
         List with one string per page (page 1 is index 0).
     """
-    with fitz.open(pdf_path) as document:
+    with pymupdf.open(pdf_path) as document:
         return [page.get_text() for page in document]
 
 
