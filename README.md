@@ -63,3 +63,80 @@ legal-rag-assistant/
 ├── .env.example            # Template for the API keys
 └── rag_faiss_store/        # Generated FAISS index (git-ignored)
 ```
+
+## Getting Started
+
+### Prerequisites
+
+- Python 3.10 or newer
+- A [Groq API key](https://console.groq.com/keys) for the web app, and/or a [Google Gemini API key](https://aistudio.google.com/apikey) for the CLI. You only need the key for the interface you plan to use.
+
+### Installation
+
+```bash
+git clone https://github.com/Vishal-Malik-code/legal-rag-assistant.git
+cd legal-rag-assistant
+
+python -m venv myenv
+
+# macOS / Linux
+source myenv/bin/activate
+# Windows
+myenv\Scripts\activate
+
+pip install -r requirements.txt
+```
+
+### Configure your API keys
+
+Copy the example file and fill in your keys:
+
+```bash
+cp .env.example .env
+```
+
+```text
+GROQ_API_KEY=your_groq_api_key       # web app
+GOOGLE_API_KEY=your_google_api_key   # command-line chat
+```
+
+> The first run downloads the embedding model (about 130 MB) from Hugging Face. After that it is cached locally.
+
+## Usage
+
+### Web app
+
+```bash
+streamlit run app.py
+```
+
+Open <http://localhost:8501>, upload a PDF, wait for "indexed successfully", then ask a question.
+
+To try it without your own file, upload `docs/sample_rental_agreement.pdf` and ask, for example:
+
+- *What is the monthly rent?*
+- *What is the late fee if rent is paid after the 3-day grace period?*
+- *How much is the security deposit?*
+
+Each answer comes with its source (file name and page) and an expandable view of the exact passages the model was given.
+
+### Command-line chat
+
+The CLI answers from the index that already exists in `rag_faiss_store/`, so build one first. Running the builder indexes the sample PDF:
+
+```bash
+python rag_index_builder.py   # build the index (or upload a PDF in the web app)
+python main_chat.py           # start chatting, type "exit" to quit
+```
+
+To inspect what the retriever returns for a question, without calling any LLM, run `python tools.py`.
+
+## Configuration
+
+| Setting | Where | Default |
+| --- | --- | --- |
+| Chunk size / overlap | `rag_index_builder.py` | 1000 / 200 characters |
+| Chunks retrieved per question (`top_k`) | `tools.py` | 3 |
+| Embedding model | `EMBEDDING_MODEL` in `rag_index_builder.py` and `tools.py` (keep both the same) | `BAAI/bge-small-en-v1.5` |
+| Web app LLM | `MODEL_NAME` in `app.py` | `openai/gpt-oss-120b` (Groq) |
+| CLI LLM | `MODEL_NAME` in `main_chat.py` | `gemini-3.6-flash` |
