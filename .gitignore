@@ -1,0 +1,28 @@
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Virtual environments
+venv/
+myenv/
+.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# FAISS index (generated at runtime)
+rag_faiss_store/
+
+# Streamlit local config and logs
+.streamlit/
+*.log
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
