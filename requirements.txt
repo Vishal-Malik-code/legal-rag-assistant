@@ -1,0 +1,18 @@
+# Vector search and embeddings
+faiss-cpu
+sentence-transformers
+langchain
+langchain-community
+langchain-huggingface
+langchain-text-splitters
+
+# PDF parsing
+pymupdf
+
+# LLM providers
+groq
+google-genai
+
+# App and configuration
+streamlit
+python-dotenv
