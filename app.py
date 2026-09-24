@@ -86,6 +86,9 @@ if uploaded_file:
         st.error(f"Failed to build index.\n\n{e}")
         st.stop()
 
+    finally:
+        os.remove(pdf_path)
+
     st.divider()
 
     # Question Answering
