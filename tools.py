@@ -2,6 +2,9 @@
 Utility functions for retrieving relevant legal context from the FAISS vector store.
 """
 
+import os
+from functools import lru_cache
+
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface import HuggingFaceEmbeddings
 
@@ -12,10 +15,27 @@ from langchain_huggingface import HuggingFaceEmbeddings
 EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 FAISS_INDEX_PATH = "./rag_faiss_store"
 
-# Initialize embeddings once
-embeddings = HuggingFaceEmbeddings(
-    model_name=EMBEDDING_MODEL
-)
+
+@lru_cache(maxsize=1)
+def get_embeddings() -> HuggingFaceEmbeddings:
+    """Load the embedding model once, on first use."""
+    return HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
+
+
+@lru_cache(maxsize=1)
+def _load_vector_store(index_mtime: float) -> FAISS:
+    """
+    Load the FAISS index from disk.
+
+    The index modification time is part of the cache key, so the store
+    is reloaded automatically whenever a new PDF has been indexed.
+    """
+    return FAISS.load_local(
+        FAISS_INDEX_PATH,
+        get_embeddings(),
+        # The index is generated locally by rag_index_builder.py.
+        allow_dangerous_deserialization=True,
+    )
 
 
 def retrieve_legal_context(
@@ -37,11 +57,8 @@ def retrieve_legal_context(
             sources (list[str]): Unique source document names.
     """
 
-    vector_store = FAISS.load_local(
-        FAISS_INDEX_PATH,
-        embeddings,
-        allow_dangerous_deserialization=True,
-    )
+    index_file = os.path.join(FAISS_INDEX_PATH, "index.faiss")
+    vector_store = _load_vector_store(os.path.getmtime(index_file))
 
     docs = vector_store.similarity_search(
         query,
