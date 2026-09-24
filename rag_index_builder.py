@@ -26,26 +26,18 @@ EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 DEFAULT_PERSIST_DIR = "./rag_faiss_store"
 
 
-def extract_text_from_pdf(pdf_path: str) -> str:
+def extract_pages_from_pdf(pdf_path: str) -> list[str]:
     """
-    Extract all text from a PDF.
+    Extract the text of every page in a PDF.
 
     Args:
         pdf_path: Path to the PDF.
 
     Returns:
-        Extracted text as a single string.
+        List with one string per page (page 1 is index 0).
     """
-    document = fitz.open(pdf_path)
-
-    text = ""
-
-    for page in document:
-        text += page.get_text()
-
-    document.close()
-
-    return text
+    with fitz.open(pdf_path) as document:
+        return [page.get_text() for page in document]
 
 
 def build_index_from_pdf(
@@ -62,9 +54,9 @@ def build_index_from_pdf(
         source_name: Original PDF filename (used in metadata).
     """
 
-    full_text = extract_text_from_pdf(pdf_path)
+    pages = extract_pages_from_pdf(pdf_path)
 
-    if not full_text.strip():
+    if not any(page.strip() for page in pages):
         raise ValueError("The uploaded PDF does not contain extractable text.")
 
     text_splitter = RecursiveCharacterTextSplitter(
@@ -72,12 +64,14 @@ def build_index_from_pdf(
         chunk_overlap=200,
     )
 
+    source = source_name or os.path.basename(pdf_path)
+
+    # Split page by page so every chunk keeps its page number.
     documents = text_splitter.create_documents(
-        texts=[full_text],
+        texts=pages,
         metadatas=[
-            {
-                "source": source_name or os.path.basename(pdf_path)
-            }
+            {"source": source, "page": page_number}
+            for page_number in range(1, len(pages) + 1)
         ],
     )
 
