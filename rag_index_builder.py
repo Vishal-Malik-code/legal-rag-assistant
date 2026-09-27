@@ -13,8 +13,9 @@ import os
 import pymupdf
 from dotenv import load_dotenv
 from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from tools import get_embeddings
 
 load_dotenv()
 
@@ -22,7 +23,6 @@ load_dotenv()
 # Constants
 # ---------------------------------------------------------------------
 
-EMBEDDING_MODEL = "BAAI/bge-small-en-v1.5"
 DEFAULT_PERSIST_DIR = "./rag_faiss_store"
 
 
@@ -40,18 +40,19 @@ def extract_pages_from_pdf(pdf_path: str) -> list[str]:
         return [page.get_text() for page in document]
 
 
-def build_index_from_pdf(
+def build_vector_store(
     pdf_path: str,
-    persist_dir: str = DEFAULT_PERSIST_DIR,
     source_name: str | None = None,
-) -> None:
+) -> FAISS:
     """
-    Build and save a FAISS index from a PDF.
+    Build an in-memory FAISS index from a PDF.
 
     Args:
         pdf_path: Path to the PDF.
-        persist_dir: Directory where the FAISS index is stored.
         source_name: Original PDF filename (used in metadata).
+
+    Returns:
+        The FAISS vector store. Nothing is written to disk.
     """
 
     pages = extract_pages_from_pdf(pdf_path)
@@ -75,14 +76,26 @@ def build_index_from_pdf(
         ],
     )
 
-    embeddings = HuggingFaceEmbeddings(
-        model_name=EMBEDDING_MODEL
+    return FAISS.from_documents(
+        documents,
+        get_embeddings(),
     )
 
-    vector_store = FAISS.from_documents(
-        documents,
-        embeddings,
-    )
+
+def build_index_from_pdf(
+    pdf_path: str,
+    persist_dir: str = DEFAULT_PERSIST_DIR,
+    source_name: str | None = None,
+) -> None:
+    """
+    Build a FAISS index from a PDF and save it to disk.
+
+    Args:
+        pdf_path: Path to the PDF.
+        persist_dir: Directory where the FAISS index is stored.
+        source_name: Original PDF filename (used in metadata).
+    """
+    vector_store = build_vector_store(pdf_path, source_name)
 
     os.makedirs(persist_dir, exist_ok=True)
 

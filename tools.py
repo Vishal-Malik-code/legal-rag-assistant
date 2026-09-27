@@ -50,6 +50,7 @@ def retrieve_legal_context(
     query: str,
     top_k: int = 3,
     debug: bool = False,
+    vector_store: FAISS | None = None,
 ):
     """
     Retrieve the most relevant document chunks for a user query.
@@ -58,6 +59,8 @@ def retrieve_legal_context(
         query: User's legal question.
         top_k: Number of similar chunks to retrieve.
         debug: Print retrieved chunks to the console.
+        vector_store: In-memory index to search. If omitted, the index
+            saved on disk is used.
 
     Returns:
         tuple:
@@ -65,8 +68,9 @@ def retrieve_legal_context(
             sources (list[str]): Unique source labels (file name and page).
     """
 
-    index_file = os.path.join(FAISS_INDEX_PATH, "index.faiss")
-    vector_store = _load_vector_store(os.path.getmtime(index_file))
+    if vector_store is None:
+        index_file = os.path.join(FAISS_INDEX_PATH, "index.faiss")
+        vector_store = _load_vector_store(os.path.getmtime(index_file))
 
     docs = vector_store.similarity_search(
         query,

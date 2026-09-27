@@ -15,7 +15,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from groq import Groq
 
-from rag_index_builder import build_index_from_pdf
+from rag_index_builder import build_vector_store
 from tools import retrieve_legal_context
 
 # Configuration
@@ -23,7 +23,6 @@ load_dotenv()
 
 API_KEY = os.getenv("GROQ_API_KEY")
 MODEL_NAME = "openai/gpt-oss-120b"
-FAISS_DIR = "./rag_faiss_store"
 
 if not API_KEY:
     st.error("GROQ_API_KEY not found. Please configure your .env file.")
@@ -77,9 +76,10 @@ if uploaded_file:
 
         try:
             with st.spinner("Building FAISS index..."):
-                build_index_from_pdf(
+                # Kept in this session's memory, so visitors never share
+                # (or overwrite) each other's documents.
+                st.session_state["vector_store"] = build_vector_store(
                     pdf_path,
-                    persist_dir=FAISS_DIR,
                     source_name=uploaded_file.name,
                 )
 
@@ -102,7 +102,10 @@ if uploaded_file:
     if question:
         try:
             with st.spinner("Searching document..."):
-                context, sources = retrieve_legal_context(question)
+                context, sources = retrieve_legal_context(
+                    question,
+                    vector_store=st.session_state["vector_store"],
+                )
 
                 prompt = f"""
 You are an expert legal assistant.
